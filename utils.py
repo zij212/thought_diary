@@ -1,10 +1,9 @@
 import requests
 import time
 import streamlit as st
-import openai
 import os
 
-openai.api_key = os.environ["OPENAI_AUTH_TOKEN"]
+openai_api_key = os.environ["OPENAI_AUTH_TOKEN"]
 aai_api_key = os.environ["AAI_AUTH_TOKEN"]
 upload_endpoint = "https://api.assemblyai.com/v2/upload"
 transcript_endpoint = "https://api.assemblyai.com/v2/transcript"
@@ -69,18 +68,15 @@ def get_paragraphs(polling_endpoint, header):
 
 @st.cache
 def extract_ste(transcript):
-    openai_completion = openai.Completion.create(
-        engine="text-davinci-002",
-        prompt=transcript+"\nAs a kind bot, please separate out the situation, thoughts, and emotions out of what was "
-               "described above, and list it out in a CBT thought records format, each in one line.",
-        temperature=0.7,
-        max_tokens=256,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0
+    header = {"Content-Type": "application/json", "Authorization": f"Bearer {openai_api_key}"}
+    prompt = transcript + "As a kind bot, please separate out the situation, thoughts, and emotions out of what was described above, and list it out in a CBT thought records format, each in one line."
+    req = requests.post(
+        url="https://api.openai.com/v1/engines/text-davinci-002/completions",
+        data='{"prompt": "' + prompt.replace("\n", "") + '", "temperature": 0.7, "max_tokens": 256, "top_p": 1, "frequency_penalty": 0, "presence_penalty": 0}',
+        headers=header
     )
-    thought_record = openai_completion.choices[0].text
-    print(thought_record)
+    resp = req.json()
+    thought_record = resp["choices"][0]["text"]
     try:
         _, situation, thoughts, emotions = thought_record.split("\n\n")
     except ValueError:
